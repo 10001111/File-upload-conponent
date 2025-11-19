@@ -1,0 +1,22 @@
+export interface UploadResult {
+  url: string;
+  name: string;
+  size: number;
+}
+
+export interface FileUploadProps {
+  onUpload: (file: File) => Promise<UploadResult>;
+  acceptedTypes?: string[];
+  maxFileSize?: number;
+  maxFiles?: number;
+  disabled?: boolean;
+  className?: string;
+}
+
+export interface UploadState {
+  selectedFile: File | null;
+  isUploading: boolean;
+  uploadProgress: number;
+  uploadedFile: UploadResult | null;
+  error: string | null;
+}

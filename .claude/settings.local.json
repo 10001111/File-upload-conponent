@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move \"src\\conponent\" \"src\\component\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
