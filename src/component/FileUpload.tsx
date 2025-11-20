@@ -1,10 +1,11 @@
-import { useState, DragEvent, ChangeEvent, FC } from 'react';
+import React, { useState, useRef } from 'react';
 import type { FileUploadProps, UploadState } from '../types';
 
-const FileUpload: FC<FileUploadProps> = ({
+const FileUpload: React.FC<FileUploadProps> = ({
   onUpload,
   acceptedTypes = [],
-  maxFileSize = 5 * 1024 * 1024, // 5MB default
+  maxFileSize = 10 * 1024 * 1024,
+  maxFiles = 1,
   disabled = false,
   className = '',
 }) => {
@@ -15,227 +16,183 @@ const FileUpload: FC<FileUploadProps> = ({
     uploadedFile: null,
     error: null,
   });
-  const [isDragging, setIsDragging] = useState(false);
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Validation function
+  const isValidFileType = (file: File): boolean => {
+    if (!acceptedTypes || acceptedTypes.length === 0) return true;
+
+    return acceptedTypes.some((type) => {
+      if (type === '*') return true;
+      if (type.endsWith('/*')) {
+        const baseType = type.replace('/*', '');
+        return file.type.startsWith(baseType);
+      }
+      return file.type === type;
+    });
   };
 
   const validateFile = (file: File): string | null => {
-    if (maxFileSize && file.size > maxFileSize) {
-      return `File size exceeds maximum of ${formatFileSize(maxFileSize)}`;
+    if (!isValidFileType(file)) {
+      return `File type not allowed. Accepted types: ${acceptedTypes.join(', ')}`;
     }
 
-    if (acceptedTypes.length > 0) {
-      const fileType = file.type;
-      const fileExtension = '.' + file.name.split('.').pop();
-      const isAccepted = acceptedTypes.some(
-        (type) => type === fileType || type === fileExtension || type === '*'
-      );
-      if (!isAccepted) {
-        return `File type not accepted. Accepted types: ${acceptedTypes.join(', ')}`;
-      }
+    if (file.size > maxFileSize) {
+      const maxMB = (maxFileSize / 1024 / 1024).toFixed(1);
+      return `File is too large. Maximum size: ${maxMB}MB`;
     }
 
     return null;
   };
 
-  const handleFile = async (file: File) => {
-    if (disabled) return;
-
+  // Handle file selection (from input or drag-drop)
+  const handleFileSelected = (file: File) => {
     const error = validateFile(file);
+    
     if (error) {
       setState((prev) => ({ ...prev, error, selectedFile: null }));
       return;
     }
 
-    setState({
+    setState((prev) => ({
+      ...prev,
       selectedFile: file,
-      isUploading: true,
-      uploadProgress: 0,
-      uploadedFile: null,
       error: null,
-    });
+    }));
+  };
+
+  // Click to select file
+  const handleClickSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelected(file);
+    }
+  };
+
+  // Drag-drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZoneRef.current?.classList.add('border-blue-500', 'bg-blue-50');
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZoneRef.current?.classList.remove('border-blue-500', 'bg-blue-50');
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZoneRef.current?.classList.remove('border-blue-500', 'bg-blue-50');
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileSelected(file);
+    }
+  };
+
+  // Handle upload
+  const handleUpload = async () => {
+    if (!state.selectedFile) return;
+
+    setState((prev) => ({ ...prev, isUploading: true, error: null }));
 
     try {
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setState((prev) => ({
-          ...prev,
-          uploadProgress: Math.min(prev.uploadProgress + 10, 90),
-        }));
-      }, 100);
-
-      const result = await onUpload(file);
-
-      clearInterval(progressInterval);
-
-      setState({
-        selectedFile: file,
+      const result = await onUpload(state.selectedFile);
+      setState((prev) => ({
+        ...prev,
         isUploading: false,
         uploadProgress: 100,
         uploadedFile: result,
-        error: null,
-      });
+      }));
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       setState((prev) => ({
         ...prev,
         isUploading: false,
         uploadProgress: 0,
-        error: err instanceof Error ? err.message : 'Upload failed',
+        error: errorMessage,
       }));
     }
   };
 
-  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!disabled && !state.isUploading) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (!disabled && !state.isUploading && e.dataTransfer.files?.[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleReset = () => {
-    setState({
-      selectedFile: null,
-      isUploading: false,
-      uploadProgress: 0,
-      uploadedFile: null,
-      error: null,
-    });
-  };
-
   return (
-    <div className={`file-upload-container ${className}`}>
-      {!state.uploadedFile && (
-        <div
-          className={`file-upload-dropzone ${isDragging ? 'dragging' : ''} ${
-            disabled || state.isUploading ? 'disabled' : ''
-          }`}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => !disabled && !state.isUploading && document.getElementById('file-input')?.click()}
-        >
-          <input
-            id="file-input"
-            type="file"
-            accept={acceptedTypes.join(',')}
-            onChange={handleFileInputChange}
-            disabled={disabled || state.isUploading}
-            style={{ display: 'none' }}
-          />
+    <div className={className}>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={acceptedTypes.join(',')}
+        multiple={maxFiles > 1}
+        onChange={handleFileInputChange}
+        className="hidden"
+        disabled={disabled || state.isUploading}
+      />
 
-          <div className="upload-icon">
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </div>
+      {/* Drop zone */}
+      <div
+        ref={dropZoneRef}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={handleClickSelect}
+        className={`
+          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+          transition-colors duration-200
+          ${disabled ? 'bg-gray-100 border-gray-300 cursor-not-allowed' : 'border-gray-300 hover:border-gray-400'}
+        `}
+      >
+        <p className="text-gray-600">
+          Drag and drop your file here, or click to select
+        </p>
+      </div>
 
-          <div className="upload-text">
-            <p className="upload-title">
-              {state.isUploading
-                ? 'Uploading...'
-                : isDragging
-                ? 'Drop file here'
-                : 'Drag & drop a file here'}
-            </p>
-            <p className="upload-subtitle">or click to browse</p>
-            <p className="upload-info">
-              {maxFileSize && `Maximum file size: ${formatFileSize(maxFileSize)}`}
-              {acceptedTypes.length > 0 && ` • Accepted: ${acceptedTypes.join(', ')}`}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {state.isUploading && (
-        <div className="upload-progress">
-          <div className="progress-bar-container">
-            <div className="progress-bar" style={{ width: `${state.uploadProgress}%` }} />
-          </div>
-          <p className="progress-text">{state.uploadProgress}%</p>
-        </div>
-      )}
-
+      {/* Error message */}
       {state.error && (
-        <div className="upload-error">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <span>{state.error}</span>
-          <button onClick={handleReset} className="retry-button">
-            Try Again
-          </button>
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
+          {state.error}
         </div>
       )}
 
+      {/* Selected file info */}
+      {state.selectedFile && !state.error && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
+          <p className="text-green-700 font-medium">{state.selectedFile.name}</p>
+          <p className="text-green-600 text-sm">
+            {(state.selectedFile.size / 1024 / 1024).toFixed(2)}MB
+          </p>
+          {!state.uploadedFile && (
+            <button
+              onClick={handleUpload}
+              disabled={state.isUploading}
+              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {state.isUploading ? 'Uploading...' : 'Upload File'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Uploaded file result */}
       {state.uploadedFile && (
-        <div className="upload-success">
-          <div className="success-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-          </div>
-          <h3>Upload Successful!</h3>
-          <div className="file-details">
-            <p className="file-name">{state.uploadedFile.name}</p>
-            <p className="file-size">{formatFileSize(state.uploadedFile.size)}</p>
-            <p className="file-url">
-              <a href={state.uploadedFile.url} target="_blank" rel="noopener noreferrer">
-                View File
-              </a>
-            </p>
-          </div>
-          <button onClick={handleReset} className="upload-another-button">
-            Upload Another File
-          </button>
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-blue-700 font-medium">Upload successful!</p>
+          <a
+            href={state.uploadedFile.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-sm"
+          >
+            View uploaded file
+          </a>
         </div>
       )}
     </div>
