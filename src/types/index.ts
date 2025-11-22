@@ -10,7 +10,6 @@ export interface FileUploadProps {
   maxFileSize?: number;
   maxFiles?: number;
   disabled?: boolean;
-  className?: string;
 }
 
 export interface FileUploadItem {
