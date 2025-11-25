@@ -1,4 +1,6 @@
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -17,6 +19,17 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* MEDIUM FIX #12: Limit excessive zoom on mobile */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 a {
@@ -31,10 +44,12 @@ a:hover {
 body {
   margin: 0;
   padding: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
+  box-sizing: border-box;
+  position: relative;
 }
 
 h1 {

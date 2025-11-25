@@ -4,8 +4,7 @@ import type { UploadResult } from './types'
 
 function App() {
   const handleUpload = async (file: File): Promise<UploadResult> => {
-    // Simulate API upload
-    console.log('Uploading file:', file.name);
+    // LOW FIX #14: Removed console.log for production
 
     // Simulate delay
     await new Promise(resolve => setTimeout(resolve, 2000));
