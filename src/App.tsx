@@ -1,35 +1,15 @@
 import './App.css'
-import FileUpload from './component/FileUpload'
-import type { UploadResult } from './types'
+import JobApplicationForm from './component/JobApplicationForm'
 
 function App() {
-  const handleUpload = async (file: File): Promise<UploadResult> => {
-    // LOW FIX #14: Removed console.log for production
-
-    // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Simulate successful upload response
-    return {
-      url: URL.createObjectURL(file),
-      name: file.name,
-      size: file.size,
-    };
-  };
-
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>File Upload Component</h1>
-        <p>Drag and drop a file or click to browse</p>
-      </header>
-
+    <div className="app" style={{
+      backgroundColor: '#ffffff',
+      minHeight: '100vh',
+      padding: '2rem 1rem',
+    }}>
       <main className="app-main">
-        <FileUpload
-          onUpload={handleUpload}
-          acceptedTypes={['image/*', 'application/pdf', '.doc', '.docx']}
-          maxFileSize={10 * 1024 * 1024} // 10MB
-        />
+        <JobApplicationForm />
       </main>
     </div>
   )
