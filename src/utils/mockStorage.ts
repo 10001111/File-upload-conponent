@@ -23,7 +23,7 @@ class MockStorage {
       return;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request = indexedDB.open(this.dbName, 1);
 
       request.onerror = () => {
@@ -68,7 +68,7 @@ class MockStorage {
 
     // Store file blob in IndexedDB if available
     if (this.db) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const transaction = this.db!.transaction([this.storeName], 'readwrite');
         const store = transaction.objectStore(this.storeName);
         
