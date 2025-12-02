@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(move \"src\\conponent\" \"src\\component\")"
+      "Bash(move \"src\\conponent\" \"src\\component\")",
+      "Bash(git clean:*)"
     ],
     "deny": [],
     "ask": []

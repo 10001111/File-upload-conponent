@@ -133,13 +133,13 @@
   .app-header p {
     font-size: clamp(0.75rem, 4vw, 0.9375rem);
     padding: 0 0.25rem;
-  }
+}
 
   .app-main {
     padding: 0;
-    width: 100%;
+  width: 100%;
     max-width: 100%;
-  }
+}
 }
 
 /* LOW FIX #15: Removed all unused CSS rules that were not being used by the component */
